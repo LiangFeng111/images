@@ -17,9 +17,10 @@ interface GitHubFile {
 }
 
 const App: React.FC = () => {
-  const [workerUrl, setWorkerUrl] = useState(
-    import.meta.env.VITE_WORKER_URL || localStorage.getItem('worker_url') || ''
-  );
+  const [workerUrl, setWorkerUrl] = useState(() => {
+    const raw = import.meta.env.VITE_WORKER_URL || localStorage.getItem('worker_url') || '';
+    return raw.replace(/\/+$/, '');
+  });
   const [authSecret, setAuthSecret] = useState(localStorage.getItem('auth_secret') || '');
   const [isConfigOpen, setIsConfigOpen] = useState(!workerUrl || !authSecret);
   const [files, setFiles] = useState<GitHubFile[]>([]);
@@ -55,8 +56,10 @@ const App: React.FC = () => {
   }, [workerUrl, authSecret, fetchFiles]);
 
   const saveConfig = () => {
-    localStorage.setItem('worker_url', workerUrl);
+    const cleanUrl = workerUrl.replace(/\/+$/, '');
+    localStorage.setItem('worker_url', cleanUrl);
     localStorage.setItem('auth_secret', authSecret);
+    setWorkerUrl(cleanUrl);
     setIsConfigOpen(false);
     fetchFiles();
   };
