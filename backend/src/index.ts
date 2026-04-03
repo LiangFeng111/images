@@ -148,13 +148,54 @@ async function handleUpload(request: Request, env: Env) {
 	}
 }
 
-// 优化后的 Base64 编码函数，支持大文件且更高效
+// 极速版 Base64 编码函数：采用分片处理，规避 Cloudflare Worker 10ms CPU 限制
 function b64encode(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer);
 	let binary = "";
-	const len = bytes.byteLength;
-	for (let i = 0; i < len; i++) {
-		binary += String.fromCharCode(bytes[i]);
+	const chunk_size = 8192; // 每次处理 8KB，避免栈溢出
+	
+	for (let i = 0; i < bytes.length; i += chunk_size) {
+		const chunk = bytes.subarray(i, i + chunk_size);
+		// @ts-ignore
+		binary += String.fromCharCode.apply(null, chunk);
 	}
+	
 	return btoa(binary);
 }
+
+async function handleDelete(request: Request, env: Env) {
+	const url = new URL(request.url);
+	const path = url.searchParams.get("path");
+	const sha = url.searchParams.get("sha");
+
+	if (!path || !sha) {
+		return new Response(JSON.stringify({ error: "Missing path or sha" }), { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+	}
+
+	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+
+	const response = await fetch(apiUrl, {
+		method: "DELETE",
+		headers: {
+			"User-Agent": "Cloudflare-Worker-Image-Host",
+			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+			Accept: "application/vnd.github.v3+json",
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			message: `Delete image: ${path}`,
+			sha: sha,
+			branch: env.GITHUB_BRANCH,
+		}),
+	});
+
+	if (!response.ok) {
+		const error = await response.json();
+		return new Response(JSON.stringify(error), { status: response.status, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+	}
+
+	return new Response(JSON.stringify({ success: true }), {
+		headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+	});
+}
+
