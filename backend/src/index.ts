@@ -53,7 +53,7 @@ async function handleList(request: Request, env: Env) {
 	const response = await fetch(apiUrl, {
 		headers: {
 			"User-Agent": "Cloudflare-Worker-Image-Host",
-			Authorization: `token ${env.GITHUB_TOKEN}`,
+			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
 			Accept: "application/vnd.github.v3+json",
 		},
 	});
@@ -94,22 +94,24 @@ async function handleUpload(request: Request, env: Env) {
 	}
 
 	const fileName = file.name;
-	const filePath = path.endsWith("/") ? `${path}${fileName}` : `${path}/${fileName}`;
+	// 为文件名增加时间戳前缀，避免冲突
+	const safeFileName = `${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
+	const filePath = path.endsWith("/") ? `${path}${safeFileName}` : `${path}/${safeFileName}`;
 	const arrayBuffer = await file.arrayBuffer();
 	const base64Content = b64encode(arrayBuffer);
 
-	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${filePath}`;
+	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
 
 	const response = await fetch(apiUrl, {
 		method: "PUT",
 		headers: {
 			"User-Agent": "Cloudflare-Worker-Image-Host",
-			Authorization: `token ${env.GITHUB_TOKEN}`,
+			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
 			Accept: "application/vnd.github.v3+json",
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({
-			message: `Upload image: ${fileName}`,
+			message: `Upload image: ${safeFileName}`,
 			content: base64Content,
 			branch: env.GITHUB_BRANCH,
 		}),
@@ -117,7 +119,11 @@ async function handleUpload(request: Request, env: Env) {
 
 	const result: any = await response.json();
 	if (!response.ok) {
-		return new Response(JSON.stringify(result), { status: response.status, headers: { "Access-Control-Allow-Origin": "*" } });
+		const errorMessage = result.message || "Unknown error from GitHub API";
+		return new Response(JSON.stringify({ error: errorMessage, details: result }), { 
+			status: response.status, 
+			headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
+		});
 	}
 
 	return new Response(JSON.stringify({
@@ -144,7 +150,7 @@ async function handleDelete(request: Request, env: Env) {
 		method: "DELETE",
 		headers: {
 			"User-Agent": "Cloudflare-Worker-Image-Host",
-			Authorization: `token ${env.GITHUB_TOKEN}`,
+			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
 			Accept: "application/vnd.github.v3+json",
 			"Content-Type": "application/json",
 		},

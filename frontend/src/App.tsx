@@ -79,7 +79,7 @@ const App: React.FC = () => {
         await fetchFiles();
       } else {
         const err = await response.json();
-        alert(`Upload failed: ${err.message || 'Unknown error'}`);
+        alert(`上传失败: ${err.error || err.message || '未知错误'}`);
       }
     } catch (error) {
       console.error('Upload error:', error);
