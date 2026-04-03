@@ -19,7 +19,23 @@
     - **Select scopes**: 勾选 `repo` (允许读写仓库内容)。
     - **Generate token**: 复制并保存该 Token (它只会出现一次)。
 
-### 2. 本地开发与运行 (可选)
+### 2. 配置项目参数 (config.json)
+
+在根目录下的 `config.json` 中配置您的非敏感信息。前端和后端都会自动读取这些配置。
+
+```json
+{
+  "GITHUB_REPO": "您的用户名/仓库名",
+  "GITHUB_BRANCH": "main",
+  "WORKER_URL": "您的 Cloudflare Worker 部署后的地址"
+}
+```
+
+- **GITHUB_REPO**: 存储图片的仓库。
+- **GITHUB_BRANCH**: 存储图片的分支。
+- **WORKER_URL**: 部署成功后，您的后端 Worker URL。
+
+### 3. 本地开发与运行 (可选)
 
 如果您想在本地运行或测试项目：
 
@@ -28,7 +44,7 @@
 2.  安装依赖：`npm install`
 3.  **配置本地变量**：在 `backend` 目录下创建 `.dev.vars` 文件，内容如下：
     ```env
-    GITHUB_REPO="yourname/my-images"
+    GITHUB_REPO="您的用户名/仓库名"
     GITHUB_BRANCH="main"
     GITHUB_TOKEN="ghp_xxxxxx"
     AUTH_SECRET="admin123"
@@ -45,24 +61,17 @@
 
 ## 🤖 自动化部署 (GitHub Actions)
 
-项目已配置 GitHub Actions。只需在 GitHub 仓库中配置好以下 Secrets，代码推送至 `main` 分支时将自动部署到 Cloudflare。
-
-### 1. 获取 Cloudflare 凭证
-1.  **API Token**: 登录 Cloudflare -> **My Profile** -> **API Tokens** -> **Create Token** -> 使用 **Edit Cloudflare Workers** 模板。
-2.  **Account ID**: 登录 Cloudflare -> **Workers & Pages** -> 在右侧栏可以找到 **Account ID**。
-
-### 2. 配置 GitHub Secrets
-在 GitHub 仓库中，进入 **Settings -> Secrets and variables -> Actions**，添加以下 **Repository secrets**:
+### 1. 配置 GitHub Secrets
+在 GitHub 仓库中，进入 **Settings -> Secrets and variables -> Actions**，添加以下 **Repository secrets** (只需配置敏感密钥):
 
 | Secret 名称 | 说明 | 示例 |
 | :--- | :--- | :--- |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API 令牌 | `xxxxxx...` |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID | `xxxxxx...` |
-| `VITE_WORKER_URL` | 前端内置的 Worker 地址 (可选) | `https://your-worker.workers.dev` |
-| `GH_REPO` | 你的 GitHub 仓库全名 | `yourname/my-images` |
-| `GH_BRANCH` | 存储图片的分支名 | `main` |
-| `GH_TOKEN` | 刚才生成的 GitHub PAT | `ghp_xxxxxx...` |
-| `AUTH_SECRET` | 自定义的通信密钥 | `admin123` |
+| `GH_TOKEN` | GitHub PAT 令牌 (必须) | `ghp_xxxxxx...` |
+| `AUTH_SECRET` | 自定义通信密钥 (必须) | `admin123` |
+
+> **注意**: 仓库名和分支名等非敏感信息现在统一在 `config.json` 中设置，无需在 GitHub Secrets 中配置。
 
 ### 3. 部署流程
 - **后端 (Worker)**: 每次推送 `backend/` 变动，将自动通过 `wrangler` 部署，并将 `GH_` 系列变量自动同步到 Worker 环境变量中。

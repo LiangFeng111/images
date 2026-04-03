@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Trash2, Copy, Check, Settings, Image as ImageIcon, Loader2, Search } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import config from './config.json';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -18,7 +19,7 @@ interface GitHubFile {
 
 const App: React.FC = () => {
   const [workerUrl, setWorkerUrl] = useState(() => {
-    const raw = import.meta.env.VITE_WORKER_URL || localStorage.getItem('worker_url') || '';
+    const raw = config.WORKER_URL || localStorage.getItem('worker_url') || '';
     return raw.replace(/\/+$/, '');
   });
   const [authSecret, setAuthSecret] = useState(localStorage.getItem('auth_secret') || '');
