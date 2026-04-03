@@ -9,6 +9,11 @@ export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
 
+		// 1. 直连文件访问 (/f/*) 不需要鉴权，方便作为图床链接直接引用
+		if (url.pathname.startsWith("/f/")) {
+			return await handleRawFile(request, env);
+		}
+
 		// Handle CORS preflight
 		if (request.method === "OPTIONS") {
 			return new Response(null, {
@@ -20,16 +25,13 @@ export default {
 			});
 		}
 
-		// Simple Auth check
+		// 2. 管理操作 (list, upload, delete) 需要鉴权
 		const authSecret = request.headers.get("X-Auth-Secret") || url.searchParams.get("secret");
 		if (authSecret !== env.AUTH_SECRET) {
 			return new Response("未授权", { status: 401, headers: { "Access-Control-Allow-Origin": "*" } });
 		}
 
 		try {
-			if (url.pathname.startsWith("/f/")) {
-				return await handleRawFile(request, env);
-			}
 			if (url.pathname === "/list") {
 				return await handleList(request, env);
 			} else if (url.pathname === "/upload" && request.method === "POST") {
