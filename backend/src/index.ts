@@ -23,7 +23,7 @@ export default {
 		// Simple Auth check
 		const authSecret = request.headers.get("X-Auth-Secret") || url.searchParams.get("secret");
 		if (authSecret !== env.AUTH_SECRET) {
-			return new Response("Unauthorized", { status: 401, headers: { "Access-Control-Allow-Origin": "*" } });
+			return new Response("未授权", { status: 401, headers: { "Access-Control-Allow-Origin": "*" } });
 		}
 
 		try {
@@ -47,7 +47,7 @@ export default {
 
 async function handleList(request: Request, env: Env) {
 	const url = new URL(request.url);
-	const path = url.searchParams.get("path") || "";
+	const path = url.searchParams.get("path") || "imgs";
 	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}?ref=${env.GITHUB_BRANCH}`;
 
 	const response = await fetch(apiUrl, {
@@ -59,6 +59,11 @@ async function handleList(request: Request, env: Env) {
 	});
 
 	if (!response.ok) {
+		if (response.status === 404) {
+			return new Response(JSON.stringify([]), {
+				headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+			});
+		}
 		const error = await response.json();
 		return new Response(JSON.stringify(error), { status: response.status, headers: { "Access-Control-Allow-Origin": "*" } });
 	}
@@ -82,14 +87,14 @@ async function handleList(request: Request, env: Env) {
 async function handleUpload(request: Request, env: Env) {
 	const formData = await request.formData();
 	const file = formData.get("file") as File;
-	const path = formData.get("path") as string || "";
+	const path = formData.get("path") as string || "imgs";
 
 	if (!file) {
 		return new Response("No file uploaded", { status: 400, headers: { "Access-Control-Allow-Origin": "*" } });
 	}
 
 	const fileName = file.name;
-	const filePath = path ? `${path}/${fileName}` : fileName;
+	const filePath = path.endsWith("/") ? `${path}${fileName}` : `${path}/${fileName}`;
 	const arrayBuffer = await file.arrayBuffer();
 	const base64Content = b64encode(arrayBuffer);
 

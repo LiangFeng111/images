@@ -91,7 +91,7 @@
     - 上传成功后，图片会自动出现在列表中。
 3.  **获取链接**:
     - 鼠标悬停在图片上，点击 **复制 (🔗)** 图标。
-    - 链接格式为: `https://cdn.jsdelivr.net/gh/yourname/my-images@main/filename.jpg`。
+    - 链接格式为: `https://cdn.jsdelivr.net/gh/yourname/my-images@main/imgs/filename.jpg`。
 4.  **删除管理**:
     - 悬停在图片上，点击 **删除 (🗑️)** 图标。
 
@@ -103,7 +103,11 @@
 - **存储**: GitHub API
 - **CDN**: jsDelivr
 
+## 链接拼接规则
+`https://cdn.jsdelivr.net/gh/{GITHUB_REPO}@{GITHUB_BRANCH}/imgs/{FILE_PATH}`
+
 ## 💡 提示
+- **存储目录**: 所有上传的图片将自动存储在仓库的 `imgs/` 文件夹下。
 - jsDelivr 缓存较强，删除 GitHub 上的图片后，CDN 链接可能还会生效一段时间。
 - 如果上传大图失败，请检查 GitHub API 的限制（通常建议图片不超过 5MB）。
 - 1
