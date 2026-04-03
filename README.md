@@ -27,13 +27,15 @@
 {
   "GITHUB_REPO": "您的用户名/仓库名",
   "GITHUB_BRANCH": "main",
-  "WORKER_URL": "您的 Cloudflare Worker 部署后的地址"
+  "WORKER_URL": "您的 Cloudflare Worker 部署后的地址",
+  "DEFAULT_CDN": "jsDelivr"
 }
 ```
 
 - **GITHUB_REPO**: 存储图片的仓库。
 - **GITHUB_BRANCH**: 存储图片的分支。
 - **WORKER_URL**: 部署成功后，您的后端 Worker URL。
+- **DEFAULT_CDN**: 默认使用的 CDN (可选: `jsDelivr`, `jsDelivr-Fastly`, `jsDelivr-GCore`, `Staticaly`, `GitMirror`, `GitHack`, `GitHub-Proxy`, `GitHub`)。
 
 ### 3. 本地开发与运行 (可选)
 

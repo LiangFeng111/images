@@ -29,6 +29,22 @@ const App: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCDN, setSelectedCDN] = useState<string>(config.DEFAULT_CDN || 'jsDelivr');
+
+  const cdnProviders: Record<string, (repo: string, branch: string, path: string) => string> = {
+    'jsDelivr': (repo, branch, path) => `https://cdn.jsdelivr.net/gh/${repo}@${branch}/${path}`,
+    'jsDelivr-Fastly': (repo, branch, path) => `https://fastly.jsdelivr.net/gh/${repo}@${branch}/${path}`,
+    'jsDelivr-GCore': (repo, branch, path) => `https://gcore.jsdelivr.net/gh/${repo}@${branch}/${path}`,
+    'Staticaly': (repo, branch, path) => `https://cdn.staticaly.com/gh/${repo}/${branch}/${path}`,
+    'GitMirror': (repo, branch, path) => `https://cdn.gitmirror.com/gh/${repo}@${branch}/${path}`,
+    'GitHack': (repo, branch, path) => `https://raw.githack.com/${repo}/${branch}/${path}`,
+    'GitHub-Proxy': (repo, branch, path) => `https://ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/${path}`,
+    'GitHub': (repo, branch, path) => `https://raw.githubusercontent.com/${repo}/${branch}/${path}`,
+  };
+
+  const getCDNUrl = useCallback((path: string) => {
+    return cdnProviders[selectedCDN](config.GITHUB_REPO, config.GITHUB_BRANCH, path);
+  }, [selectedCDN]);
 
   const fetchFiles = useCallback(async () => {
     if (!workerUrl || !authSecret) return;
@@ -133,9 +149,25 @@ const App: React.FC = () => {
               <ImageIcon className="text-blue-500" />
               GitHub 图床
             </h1>
-            <p className="text-gray-500 dark:text-gray-400">使用 Cloudflare + GitHub + jsDelivr 构建</p>
+            <p className="text-gray-500 dark:text-gray-400">使用 Cloudflare + GitHub + CDN 构建</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
+              {Object.keys(cdnProviders).map((name) => (
+                <button
+                  key={name}
+                  onClick={() => setSelectedCDN(name)}
+                  className={cn(
+                    "px-3 py-1 text-sm font-medium rounded-md transition-all",
+                    selectedCDN === name 
+                      ? "bg-blue-600 text-white shadow-sm" 
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  )}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
             <button 
               onClick={() => setIsConfigOpen(!isConfigOpen)}
               className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
@@ -205,40 +237,41 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredFiles.map((file, index) => (
-              <div key={file.sha} className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                <div className="aspect-video bg-gray-100 dark:bg-gray-900 relative">
-                  {file.url && (
+            {filteredFiles.map((file, index) => {
+              const displayUrl = getCDNUrl(file.path);
+              return (
+                <div key={file.sha} className="group relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="aspect-video bg-gray-100 dark:bg-gray-900 relative">
                     <img 
-                      src={file.url} 
+                      src={displayUrl} 
                       alt={file.name} 
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                    <button 
-                      onClick={() => file.url && copyToClipboard(file.url, index)}
-                      className="p-2 bg-white text-gray-900 rounded-full hover:scale-110 transition-transform"
-                      title="复制链接"
-                    >
-                      {copiedIndex === index ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(file.path, file.sha)}
-                      className="p-2 bg-red-600 text-white rounded-full hover:scale-110 transition-transform"
-                      title="删除图片"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                      <button 
+                        onClick={() => copyToClipboard(displayUrl, index)}
+                        className="p-2 bg-white text-gray-900 rounded-full hover:scale-110 transition-transform"
+                        title="复制链接"
+                      >
+                        {copiedIndex === index ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(file.path, file.sha)}
+                        className="p-2 bg-red-600 text-white rounded-full hover:scale-110 transition-transform"
+                        title="删除图片"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm font-medium truncate mb-1" title={file.name}>{file.name}</p>
+                    <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
                   </div>
                 </div>
-                <div className="p-3">
-                  <p className="text-sm font-medium truncate mb-1" title={file.name}>{file.name}</p>
-                  <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {filteredFiles.length === 0 && (
               <div className="col-span-full py-20 text-center text-gray-500">
                 <p className="text-lg">暂无图片</p>

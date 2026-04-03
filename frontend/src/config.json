@@ -1,5 +1,6 @@
 {
-  "GITHUB_REPO": "yourname/my-images",
+  "GITHUB_REPO": "LiangFeng111/images",
   "GITHUB_BRANCH": "main",
-  "WORKER_URL": "https://your-worker.workers.dev"
+  "WORKER_URL": "https://github-image-host-backend.26293375698980.workers.dev",
+  "DEFAULT_CDN": "jsDelivr"
 }
