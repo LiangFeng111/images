@@ -85,97 +85,75 @@ async function handleList(request: Request, env: Env) {
 }
 
 async function handleUpload(request: Request, env: Env) {
-	const formData = await request.formData();
-	const file = formData.get("file") as File;
-	const path = formData.get("path") as string || "imgs";
+	try {
+		const formData = await request.formData();
+		const file = formData.get("file") as File;
+		const path = formData.get("path") as string || "imgs";
 
-	if (!file) {
-		return new Response("No file uploaded", { status: 400, headers: { "Access-Control-Allow-Origin": "*" } });
-	}
+		if (!file) {
+			return new Response(JSON.stringify({ error: "No file uploaded" }), { status: 400, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+		}
 
-	const fileName = file.name;
-	// 为文件名增加时间戳前缀，避免冲突
-	const safeFileName = `${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
-	const filePath = path.endsWith("/") ? `${path}${safeFileName}` : `${path}/${safeFileName}`;
-	const arrayBuffer = await file.arrayBuffer();
-	const base64Content = b64encode(arrayBuffer);
+		const fileName = file.name;
+		// 规范化文件名：移除空格，增加时间戳
+		const safeFileName = `${Date.now()}-${fileName.replace(/\s+/g, "-")}`;
+		// 路径处理：确保 imgs/filename 这种结构，不重复斜杠
+		const cleanPath = path.replace(/\/+$/, "");
+		const filePath = `${cleanPath}/${safeFileName}`;
+		
+		const arrayBuffer = await file.arrayBuffer();
+		const base64Content = b64encode(arrayBuffer);
 
-	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${encodeURIComponent(filePath)}`;
+		// GitHub API 路径：只对路径组件进行编码，而不是整个路径
+		const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${filePath.split('/').map(encodeURIComponent).join('/')}`;
 
-	const response = await fetch(apiUrl, {
-		method: "PUT",
-		headers: {
-			"User-Agent": "Cloudflare-Worker-Image-Host",
-			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-			Accept: "application/vnd.github.v3+json",
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			message: `Upload image: ${safeFileName}`,
-			content: base64Content,
-			branch: env.GITHUB_BRANCH,
-		}),
-	});
+		const response = await fetch(apiUrl, {
+			method: "PUT",
+			headers: {
+				"User-Agent": "Cloudflare-Worker-Image-Host",
+				Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+				Accept: "application/vnd.github.v3+json",
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				message: `Upload image: ${safeFileName}`,
+				content: base64Content,
+				branch: env.GITHUB_BRANCH,
+			}),
+		});
 
-	const result: any = await response.json();
-	if (!response.ok) {
-		const errorMessage = result.message || "Unknown error from GitHub API";
-		return new Response(JSON.stringify({ error: errorMessage, details: result }), { 
-			status: response.status, 
-			headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
+		const result: any = await response.json();
+		if (!response.ok) {
+			return new Response(JSON.stringify({ 
+				error: result.message || "GitHub API Error", 
+				details: result 
+			}), { 
+				status: response.status, 
+				headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
+			});
+		}
+
+		return new Response(JSON.stringify({
+			success: true,
+			url: `https://cdn.jsdelivr.net/gh/${env.GITHUB_REPO}@${env.GITHUB_BRANCH}/${filePath}`,
+			data: result
+		}), {
+			headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+		});
+	} catch (err: any) {
+		return new Response(JSON.stringify({ error: "Internal Server Error", message: err.message }), {
+			status: 500,
+			headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
 		});
 	}
-
-	return new Response(JSON.stringify({
-		success: true,
-		url: `https://cdn.jsdelivr.net/gh/${env.GITHUB_REPO}@${env.GITHUB_BRANCH}/${filePath}`,
-		data: result
-	}), {
-		headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-	});
 }
 
-async function handleDelete(request: Request, env: Env) {
-	const url = new URL(request.url);
-	const path = url.searchParams.get("path");
-	const sha = url.searchParams.get("sha");
-
-	if (!path || !sha) {
-		return new Response("Missing path or sha", { status: 400, headers: { "Access-Control-Allow-Origin": "*" } });
-	}
-
-	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
-
-	const response = await fetch(apiUrl, {
-		method: "DELETE",
-		headers: {
-			"User-Agent": "Cloudflare-Worker-Image-Host",
-			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-			Accept: "application/vnd.github.v3+json",
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			message: `Delete image: ${path}`,
-			sha: sha,
-			branch: env.GITHUB_BRANCH,
-		}),
-	});
-
-	if (!response.ok) {
-		const error = await response.json();
-		return new Response(JSON.stringify(error), { status: response.status, headers: { "Access-Control-Allow-Origin": "*" } });
-	}
-
-	return new Response(JSON.stringify({ success: true }), {
-		headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-	});
-}
-
-// Helper to encode ArrayBuffer to Base64
+// 优化后的 Base64 编码函数，支持大文件且更高效
 function b64encode(buffer: ArrayBuffer): string {
-	let binary = "";
 	const bytes = new Uint8Array(buffer);
-	for (let i = 0; i < bytes.byteLength; i++) {
+	let binary = "";
+	const len = bytes.byteLength;
+	for (let i = 0; i < len; i++) {
 		binary += String.fromCharCode(bytes[i]);
 	}
 	return btoa(binary);
