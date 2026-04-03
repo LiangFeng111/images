@@ -1,7 +1,7 @@
 name = "github-image-host-backend"
 main = "src/index.ts"
 compatibility_date = "2024-04-04"
-
+#测试
 [vars]
 # GITHUB_REPO = "username/repo"
 # GITHUB_BRANCH = "main"
