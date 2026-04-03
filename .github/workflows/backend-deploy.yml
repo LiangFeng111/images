@@ -20,11 +20,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
       - name: Install Dependencies
         run: |
           cd backend
-          npm install
+          npm ci
 
       # ✅ 安装 wrangler（关键，按用户要求指定版本或最新版）
       - name: Install Wrangler
