@@ -1,0 +1,48 @@
+name: Cloudflare Workers Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          npm install
+
+      # ✅ 安装 wrangler（关键，按用户要求指定版本或最新版）
+      - name: Install Wrangler
+        run: npm install -g wrangler@4.79.0
+
+      - name: Debug Env
+        run: |
+          echo "TOKEN length: ${#CLOUDFLARE_API_TOKEN}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      # ✅ 直接 deploy（关键）
+      - name: Deploy
+        run: |
+          cd backend
+          wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
