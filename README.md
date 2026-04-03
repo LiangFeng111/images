@@ -68,9 +68,13 @@
 
 - `CLOUDFLARE_API_TOKEN`: 你的 Cloudflare API Token (需要 `Cloudflare Workers` 和 `Cloudflare Pages` 的编辑权限)。
 - `CLOUDFLARE_ACCOUNT_ID`: 你的 Cloudflare 账户 ID (在 Dashboard 的 Workers 页面右侧可以找到)。
+- `GH_REPO`: 你的仓库全名 (如 `yourname/my-images`)。
+- `GH_BRANCH`: 分支名 (通常是 `main`)。
+- `GH_TOKEN`: 你的 GitHub PAT 令牌。
+- `AUTH_SECRET`: 你自定义的通信密钥（admin123）。
 
 ### 2. 部署流程
-- **后端**: 每次推送 `backend/` 目录下的更改，`.github/workflows/backend-deploy.yml` 会触发，使用 `wrangler deploy` 自动部署。
+- **后端**: 每次推送 `backend/` 目录下的更改，`.github/workflows/backend-deploy.yml` 会触发，使用 `wrangler deploy` 自动部署。同时会将上述 `GH_` 开头的 Secret 自动同步到 Cloudflare Worker 的 `GITHUB_` 变量中。
 - **前端**: 每次推送 `frontend/` 目录下的更改，`.github/workflows/frontend-deploy.yml` 会触发，构建并发布到 Cloudflare Pages。
 
 ---

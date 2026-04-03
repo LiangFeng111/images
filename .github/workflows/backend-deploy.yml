@@ -38,10 +38,17 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      # ✅ 直接 deploy（关键）
+      # ✅ 直接 deploy
       - name: Deploy
         run: |
           cd backend
+          # 如果你在 GitHub Secrets 里配置了这些，它们会被自动推送到 Cloudflare
+          # 密钥名称已避开 GITHUB_ 前端限制
+          if [ ! -z "${{ secrets.GH_TOKEN }}" ]; then echo "${{ secrets.GH_TOKEN }}" | wrangler secret put GITHUB_TOKEN; fi
+          if [ ! -z "${{ secrets.GH_REPO }}" ]; then echo "${{ secrets.GH_REPO }}" | wrangler secret put GITHUB_REPO; fi
+          if [ ! -z "${{ secrets.GH_BRANCH }}" ]; then echo "${{ secrets.GH_BRANCH }}" | wrangler secret put GITHUB_BRANCH; fi
+          if [ ! -z "${{ secrets.AUTH_SECRET }}" ]; then echo "${{ secrets.AUTH_SECRET }}" | wrangler secret put AUTH_SECRET; fi
+          
           wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
