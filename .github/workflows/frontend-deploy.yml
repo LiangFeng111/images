@@ -40,4 +40,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/dist --project-name=github-image-host-frontend --commit-dirty=true
+          # 只有包含这两行，才是真正的全自动（自动创建+自动部署）
+          command: |
+            pages project create github-image-host-frontend --production-branch main || true
+            pages deploy frontend/dist --project-name=github-image-host-frontend --commit-dirty=true
