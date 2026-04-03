@@ -17,7 +17,9 @@ interface GitHubFile {
 }
 
 const App: React.FC = () => {
-  const [workerUrl, setWorkerUrl] = useState(localStorage.getItem('worker_url') || '');
+  const [workerUrl, setWorkerUrl] = useState(
+    import.meta.env.VITE_WORKER_URL || localStorage.getItem('worker_url') || ''
+  );
   const [authSecret, setAuthSecret] = useState(localStorage.getItem('auth_secret') || '');
   const [isConfigOpen, setIsConfigOpen] = useState(!workerUrl || !authSecret);
   const [files, setFiles] = useState<GitHubFile[]>([]);

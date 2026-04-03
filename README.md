@@ -19,95 +19,79 @@
     - **Select scopes**: 勾选 `repo` (允许读写仓库内容)。
     - **Generate token**: 复制并保存该 Token (它只会出现一次)。
 
-### 2. 部署后端 (Cloudflare Worker)
+### 2. 本地开发与运行 (可选)
 
-后端负责与 GitHub API 安全交互，并处理图片上传/列表/删除。
+如果您想在本地运行或测试项目：
 
-1.  **本地安装**:
-    - 进入 `backend` 目录。
-    - 运行 `npm install` 安装依赖。
-2.  **部署到 Cloudflare**:
-    - 运行 `npm run deploy`。
-    - 首次运行会要求你登录 Cloudflare 账号。
-    - 部署成功后，你会得到一个 URL (例如 `https://github-image-host-backend.yourname.workers.dev`)。
-3.  **配置环境变量 (必须)**:
-    - 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)。
-    - 进入 **Workers & Pages** -> 点击你的 Worker 项目 (`github-image-host-backend`)。
-    - 点击 **Settings** (设置) -> **Variables** (变量)。
-    - 在 **Environment Variables** 中点击 **Add variable**，添加以下 4 个变量：
-      - `GITHUB_REPO`: 你的仓库全名 (如 `yourname/my-images`)。
-      - `GITHUB_BRANCH`: 分支名 (通常是 `main`)。
-      - `GITHUB_TOKEN`: 刚才生成的 GitHub Token。
-      - `AUTH_SECRET`: **自定义一个密钥** (例如 `mysecret123`)，用于前端和后端通信。
-    - 点击 **Save and deploy**。
+#### **后端 (Backend)**
+1.  进入目录：`cd backend`
+2.  安装依赖：`npm install`
+3.  **配置本地变量**：在 `backend` 目录下创建 `.dev.vars` 文件，内容如下：
+    ```env
+    GITHUB_REPO="yourname/my-images"
+    GITHUB_BRANCH="main"
+    GITHUB_TOKEN="ghp_xxxxxx"
+    AUTH_SECRET="admin123"
+    ```
+4.  本地运行：`npm run dev` (默认运行在 `http://localhost:8787`)
 
-### 3. 部署前端 (Cloudflare Pages)
-
-前端提供可视化的图片管理和上传界面。
-
-1.  **本地构建**:
-    - 进入 `frontend` 目录。
-    - 运行 `npm install`。
-    - 运行 `npm run build`。构建完成后会生成 `dist` 文件夹。
-2.  **在 Cloudflare Pages 部署**:
-    - 方式 A (手动): 在 Cloudflare Dashboard 进入 **Workers & Pages** -> **Create** -> **Pages** -> **Upload assets**，将 `dist` 文件夹拖进去。
-    - 方式 B (连接 GitHub): 连接你的前端代码仓库，配置如下：
-      - **Framework preset**: `Vite`
-      - **Build command**: `npm run build`
-      - **Build output directory**: `dist`
-3.  **访问前端**: 部署成功后访问 Cloudflare 提供的 `.pages.dev` 域名。
+#### **前端 (Frontend)**
+1.  进入目录：`cd frontend`
+2.  安装依赖：`npm install`
+3.  本地运行：`npm run dev`
+4.  访问：打开浏览器访问 `http://localhost:5173`。在设置中填入本地后端地址 `http://localhost:8787` 即可进行本地调试。
 
 ---
 
 ## 🤖 自动化部署 (GitHub Actions)
 
-项目已配置 GitHub Actions 自动部署。当你推送代码到 `main` 分支时，后端 Worker 和前端 Pages 会自动更新。
+项目已配置 GitHub Actions。只需在 GitHub 仓库中配置好以下 Secrets，代码推送至 `main` 分支时将自动部署到 Cloudflare。
 
-### 1. 配置 GitHub Secrets
+### 1. 获取 Cloudflare 凭证
+1.  **API Token**: 登录 Cloudflare -> **My Profile** -> **API Tokens** -> **Create Token** -> 使用 **Edit Cloudflare Workers** 模板。
+2.  **Account ID**: 登录 Cloudflare -> **Workers & Pages** -> 在右侧栏可以找到 **Account ID**。
+
+### 2. 配置 GitHub Secrets
 在 GitHub 仓库中，进入 **Settings -> Secrets and variables -> Actions**，添加以下 **Repository secrets**:
 
-- `CLOUDFLARE_API_TOKEN`: 你的 Cloudflare API Token (需要 `Cloudflare Workers` 和 `Cloudflare Pages` 的编辑权限)。
-- `CLOUDFLARE_ACCOUNT_ID`: 你的 Cloudflare 账户 ID (在 Dashboard 的 Workers 页面右侧可以找到)。
-- `GH_REPO`: 你的仓库全名 (如 `yourname/my-images`)。
-- `GH_BRANCH`: 分支名 (通常是 `main`)。
-- `GH_TOKEN`: 你的 GitHub PAT 令牌。
-- `AUTH_SECRET`: 你自定义的通信密钥（admin123）。
+| Secret 名称 | 说明 | 示例 |
+| :--- | :--- | :--- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API 令牌 | `xxxxxx...` |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID | `xxxxxx...` |
+| `VITE_WORKER_URL` | 前端内置的 Worker 地址 (可选) | `https://your-worker.workers.dev` |
+| `GH_REPO` | 你的 GitHub 仓库全名 | `yourname/my-images` |
+| `GH_BRANCH` | 存储图片的分支名 | `main` |
+| `GH_TOKEN` | 刚才生成的 GitHub PAT | `ghp_xxxxxx...` |
+| `AUTH_SECRET` | 自定义的通信密钥 | `admin123` |
 
-### 2. 部署流程
-- **后端**: 每次推送 `backend/` 目录下的更改，`.github/workflows/backend-deploy.yml` 会触发，使用 `wrangler deploy` 自动部署。同时会将上述 `GH_` 开头的 Secret 自动同步到 Cloudflare Worker 的 `GITHUB_` 变量中。
-- **前端**: 每次推送 `frontend/` 目录下的更改，`.github/workflows/frontend-deploy.yml` 会触发，构建并发布到 Cloudflare Pages。
+### 3. 部署流程
+- **后端 (Worker)**: 每次推送 `backend/` 变动，将自动通过 `wrangler` 部署，并将 `GH_` 系列变量自动同步到 Worker 环境变量中。
+- **前端 (Pages)**: 每次推送 `frontend/` 变动，将自动构建并发布。**首次部署后，请在 Cloudflare Pages 侧确认项目名称为 `github-image-host-frontend`**。
 
 ---
 
+## 🛠️ 如何操作使用
 
 1.  **配置前端**:
-    - 第一次打开页面时，界面会提示配置。
-    - 点击右上角的 **设置 (⚙️)** 图标。
-    - **Worker URL**: 输入你部署好的后端 Worker 地址 (如 `https://xxx.workers.dev`)。
-    - **Auth Secret**: 输入你刚才在 Worker 变量中设置的 `AUTH_SECRET`。
+    - 第一次打开部署好的 Pages 页面时，点击右上角的 **设置 (⚙️)** 图标。
+    - **Worker URL**: 输入部署好的后端地址 (如 `https://github-image-host-backend.yourname.workers.dev`)。
+    - **Auth Secret**: 输入您在 GitHub Secrets 中设置的 `AUTH_SECRET`。
     - 点击 **保存配置**。
-2.  **上传图片**:
-    - 点击 **上传图片** 按钮或拖拽图片。
-    - 上传成功后，图片会自动出现在列表中。
-3.  **获取链接**:
-    - 鼠标悬停在图片上，点击 **复制 (🔗)** 图标。
-    - 链接格式为: `https://cdn.jsdelivr.net/gh/yourname/my-images@main/imgs/filename.jpg`。
-4.  **删除管理**:
-    - 悬停在图片上，点击 **删除 (🗑️)** 图标。
+2.  **上传与管理**:
+    - 点击 **上传图片** 或拖拽上传。
+    - 鼠标悬停图片可进行 **复制链接 (🔗)** 或 **删除 (🗑️)**。
+3.  **链接格式**:
+    - `https://cdn.jsdelivr.net/gh/yourname/my-images@main/imgs/filename.jpg`
 
 ---
 
 ## 📦 技术栈
 - **前端**: React, TypeScript, Tailwind CSS, Lucide Icons
-- **后端**: Cloudflare Workers (Hono-like style)
+- **后端**: Cloudflare Workers
 - **存储**: GitHub API
 - **CDN**: jsDelivr
 
-## 链接拼接规则
-`https://cdn.jsdelivr.net/gh/{GITHUB_REPO}@{GITHUB_BRANCH}/imgs/{FILE_PATH}`
-
 ## 💡 提示
 - **存储目录**: 所有上传的图片将自动存储在仓库的 `imgs/` 文件夹下。
-- jsDelivr 缓存较强，删除 GitHub 上的图片后，CDN 链接可能还会生效一段时间。
-- 如果上传大图失败，请检查 GitHub API 的限制（通常建议图片不超过 5MB）。
-- 1
+- **缓存说明**: jsDelivr 缓存较强，删除 GitHub 图片后，CDN 链接可能仍会生效一段时间。
+- **限制**: 建议单张图片不超过 5MB 以符合 GitHub API 最佳实践。
