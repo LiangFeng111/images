@@ -29,16 +29,11 @@ const App: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCDN, setSelectedCDN] = useState<string>(config.DEFAULT_CDN || 'jsDelivr');
+  const [selectedCDN, setSelectedCDN] = useState<string>(config.DEFAULT_CDN || 'Cloudflare');
 
   const cdnProviders: Record<string, (repo: string, branch: string, path: string) => string> = {
+    'Cloudflare': (_repo, _branch, path) => `${workerUrl}/f/${path}`,
     'jsDelivr': (repo, branch, path) => `https://cdn.jsdelivr.net/gh/${repo}@${branch}/${path}`,
-    'jsDelivr-Fastly': (repo, branch, path) => `https://fastly.jsdelivr.net/gh/${repo}@${branch}/${path}`,
-    'jsDelivr-GCore': (repo, branch, path) => `https://gcore.jsdelivr.net/gh/${repo}@${branch}/${path}`,
-    'Staticaly': (repo, branch, path) => `https://cdn.staticaly.com/gh/${repo}/${branch}/${path}`,
-    'GitMirror': (repo, branch, path) => `https://cdn.gitmirror.com/gh/${repo}@${branch}/${path}`,
-    'GitHack': (repo, branch, path) => `https://raw.githack.com/${repo}/${branch}/${path}`,
-    'GitHub-Proxy': (repo, branch, path) => `https://ghproxy.com/https://raw.githubusercontent.com/${repo}/${branch}/${path}`,
     'GitHub': (repo, branch, path) => `https://raw.githubusercontent.com/${repo}/${branch}/${path}`,
   };
 

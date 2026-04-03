@@ -35,7 +35,7 @@
 - **GITHUB_REPO**: 存储图片的仓库。
 - **GITHUB_BRANCH**: 存储图片的分支。
 - **WORKER_URL**: 部署成功后，您的后端 Worker URL。
-- **DEFAULT_CDN**: 默认使用的 CDN (可选: `jsDelivr`, `jsDelivr-Fastly`, `jsDelivr-GCore`, `Staticaly`, `GitMirror`, `GitHack`, `GitHub-Proxy`, `GitHub`)。
+- **DEFAULT_CDN**: 默认使用的 CDN (可选: `Cloudflare`, `jsDelivr`, `GitHub`)。
 
 ### 3. 本地开发与运行 (可选)
 

@@ -27,6 +27,9 @@ export default {
 		}
 
 		try {
+			if (url.pathname.startsWith("/f/")) {
+				return await handleRawFile(request, env);
+			}
 			if (url.pathname === "/list") {
 				return await handleList(request, env);
 			} else if (url.pathname === "/upload" && request.method === "POST") {
@@ -44,6 +47,35 @@ export default {
 		}
 	},
 };
+
+async function handleRawFile(request: Request, env: Env) {
+	const url = new URL(request.url);
+	const filePath = url.pathname.slice(3); // 去掉 /f/
+	const apiUrl = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${filePath}?ref=${env.GITHUB_BRANCH}`;
+
+	const response = await fetch(apiUrl, {
+		headers: {
+			"User-Agent": "Cloudflare-Worker-Image-Host",
+			Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+			Accept: "application/vnd.github.v3.raw", // 关键：请求原始二进制内容
+		},
+	});
+
+	if (!response.ok) {
+		return new Response("File Not Found", { status: 404 });
+	}
+
+	// 自动识别图片类型
+	const contentType = response.headers.get("Content-Type") || "application/octet-stream";
+	
+	return new Response(response.body, {
+		headers: {
+			"Content-Type": contentType,
+			"Cache-Control": "public, max-age=2592000, s-maxage=2592000", // 缓存 30 天
+			"Access-Control-Allow-Origin": "*",
+		},
+	});
+}
 
 async function handleList(request: Request, env: Env) {
 	const url = new URL(request.url);

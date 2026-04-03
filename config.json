@@ -2,5 +2,5 @@
   "GITHUB_REPO": "LiangFeng111/images",
   "GITHUB_BRANCH": "main",
   "WORKER_URL": "https://github-image-host-backend.26293375698980.workers.dev",
-  "DEFAULT_CDN": "jsDelivr"
+  "DEFAULT_CDN": "Cloudflare"
 }
